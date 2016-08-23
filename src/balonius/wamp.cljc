@@ -1,4 +1,4 @@
-(ns balonius.wamp
+(ns ^:no-doc balonius.wamp
   (:require [balonius.wamp.proto :as wamp.proto]
             [balonius.platform.wamp :as platform.wamp]
             [#? (:clj clojure.core.async :cljs cljs.core.async) :as async]))
@@ -7,4 +7,4 @@
   (wamp.proto/-subscribe! conn topic (or chan (async/chan))))
 
 (defn connect! [{:keys [uri realm] :as opts}]
-  (platform.wamp/connect! opts))
+  (wamp.proto/connect! (platform.wamp/connection opts)))

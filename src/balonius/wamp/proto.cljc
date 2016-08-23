@@ -1,9 +1,9 @@
 (ns balonius.wamp.proto)
 
 (defprotocol WampConnection
-  (on-connected [_]
+  (connect! [_]
     "Return promise resolving upon connection.")
   (disconnect! [_]
-    "Asynchronous disconnect.")
+    "Return promise resolving upon disconnection.")
   (-subscribe! [_ topic chan]
     "Create asynchronous channel receiving events from `topic`."))

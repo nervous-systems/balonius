@@ -1,4 +1,4 @@
-(ns balonius.platform.wamp
+(ns ^:no-doc balonius.platform.wamp
   (:require [clojure.core.async :as async]
             [camel-snake-kebab.core :as csk]
             [promesa.core :as p]
@@ -48,30 +48,26 @@
           (resolve nil)))
       reject))))
 
-(defrecord WampConnectionHandle [conn state]
+(defrecord WampConnectionHandle [client state]
   wamp.proto/WampConnection
-  (on-connected [this]
-    (let [p (on-status conn WampClient$ConnectedState)]
+  (connect! [this]
+    (let [p (on-status client WampClient$ConnectedState)]
+      (.open client)
       (p/then p (constantly this))))
   (disconnect! [_]
-    (let [p (on-status conn WampClient$DisconnectedState)]
-      (.close conn)
+    (let [p (on-status client WampClient$DisconnectedState)]
+      (.close client)
       p))
   (-subscribe! [_ topic chan]
-    (println topic chan "<<<<")
-    (let [topic              (keyword topic)
-          chan               (or chan (async/chan))
-          {{sub :sub} topic} (swap! state update topic
-                                    (fn [{:keys [sub chans]}]
-                                      {:sub   (or sub (.makeSubscription conn (name topic)))
-                                       :chans (conj chans chan)}))]
-      (.subscribe sub (observer #(async/>!! chan (do
-                                                   (println % (pubsub->map %))
-                                                   (pubsub->map %)))))
+    (let [topic (keyword topic)
+          sub   (.makeSubscription client (name topic))]
+      (.subscribe
+       sub
+       (observer
+        (fn [o]
+          (when-not (async/put! chan (pubsub->map o))
+            (.unsubscribe sub)))))
       chan)))
-
-(defn- ->conn-handle [client]
-  (->WampConnectionHandle client (atom {})))
 
 (def ^:private retry-msecs 100)
 
@@ -86,7 +82,5 @@
                                 TimeUnit/MILLISECONDS)
         .build)))
 
-(defn connect! [{:keys [uri realm] :as opts}]
-  (let [client (build-client opts)]
-    (.open client)
-    (wamp.proto/on-connected (->conn-handle client))))
+(defn connection [{:keys [uri realm] :as opts}]
+  (->WampConnectionHandle (build-client opts) (atom {})))
