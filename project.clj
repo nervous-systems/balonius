@@ -1,5 +1,5 @@
 (defproject io.nervous/balonius "0.1.0-SNAPSHOT"
-  :description "Clojure/script poloniex (cryptocurrency exchange) client"
+  :description "Clojure/script Poloniex (cryptocurrency exchange) client"
   :url "https://github.com/nervous-systems/balonius"
   :license {:name "Unlicense" :url "http://unlicense.org/UNLICENSE"}
   :dependencies [[org.clojure/clojure           "1.8.0"]
