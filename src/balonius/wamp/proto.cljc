@@ -1,4 +1,4 @@
-(ns balonius.wamp.proto)
+(ns ^:no-doc balonius.wamp.proto)
 
 (defprotocol WampConnection
   (connect! [_]

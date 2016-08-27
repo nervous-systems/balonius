@@ -5,21 +5,24 @@
   The three connection-consuming functions, [[ticker!]], [[follow!]]
   and [[trollbox!]] accept an optional final map argument, having keys:
 
-  - `:chan` - If supplied, received items will be placed on this core.async
+  - `:chan` - If supplied, received items will be piped onto this core.async
   channel.
 
   - `:str->number` - Poloniex represents some numerical values as Number
   literals and others as Strings.  By default, Strings under numerical keys will
-  be parsed with bigdec (JVM) or js/parseFloat (cljs).  This behaviour may be
+  be parsed with `bigdec` (JVM) or `js/parseFloat` (cljs).  This behaviour may be
   undesireable, and can be overriden by passing an alternate function,
-  e.g `(ticker! conn {:str->number identity})`.
+  e.g.
+
+```clojure
+(ticker! conn {:str->number identity})
+```
 
   In all three cases, closing the returned channel will result in teardown of
-  the underlying subscription, though the connection will remain live. "
+  the underlying subscription, though the connection will remain live."
   (:require [balonius.wamp :as wamp]
             [balonius.util :as util]
             [camel-snake-kebab.core :as csk]
-            [camel-snake-kebab.extras :as csk.extras]
             [#? (:clj  clojure.core.async
                  :cljs cljs.core.async) :as async]))
 
@@ -34,24 +37,13 @@
 (def ^:private ticker-cols
   [:pair :last :low-ask :high-bid :change :base-vol :quote-vol :frozen? :high-24 :low-24])
 
-(def ^:private number-col?
-  (disj (into #{} ticker-cols)
-        :frozen? :pair))
-
 (defn- ticker-frame->map [{args :args} str->number]
-  (persistent!
-   (reduce
-    (fn [acc [k v]]
-      (assoc! acc k (cond (number-col? k) (str->number v)
-                          (= k :frozen?)  (= v "1")
-                          (= k :pair)     (util/->pair v))))
-    (transient {})
-    (zipmap ticker-cols args))))
+  (util/tidy-tick (zipmap ticker-cols args)))
 
 (defn connect!
   "Return a promise resolving to a connection record for the Poloniex WAMP/WS
   streaming API & suitable for passing into [[ticker!]], [[follow!]]
-  & [[trollbox!]].
+  & [[trollbox!]]
 
   Supported `opts` are `:uri` & `:realm`, though it's unlikely non-default
   values will be helpful."
@@ -70,10 +62,8 @@
   keys:
 
   `:pair`, `:last`, `:low-ask`, `:high-bid`, `:change`, `:base-vol`,
-  `:quote-vol`, `:frozen?`, `:high-24` & `:low-24`
-
-  Corresponding in order to the [documented
-  fields](https://poloniex.com/support/api/).
+  `:quote-vol`, `:frozen?`, `:high-24` & `:low-24` corresponding in order to
+  the [remote API's documented fields](https://poloniex.com/support/api/).
 
   Currency pairs are represented as vectors of uppercase keywords,
   e.g. `[:BTC :DOGE]`."
@@ -101,10 +91,8 @@
   "Given a connection record, return a core.async channel containing maps having
   keys:
 
-  `:type`, `:id`, `:user`, `:body`, `:reputation`
-
-  Corresponding in order to the [documented
-  fields](https://poloniex.com/support/api/)."
+  `:type`, `:id`, `:user`, `:body`, `:reputation` corresponding in order
+  to [Poloniex's documented fields](https://poloniex.com/support/api/)."
   [conn & [opts]]
   (subscription! conn "trollbox" trollbox-frame->map opts))
 
@@ -125,11 +113,11 @@
 (defn- flatten-orders [{:keys [args kw]} str->number]
   (let [sn (get kw "seq")]
     (for [order args]
-      (assoc (into {} order) :balonius/sequence sn))))
+      (assoc (into {} order) :poloniex/sequence sn))))
 
 (defn- order->map [order str->number]
   (let [out {:message          (csk/->kebab-case-keyword (order "type"))
-             :balonius/sequence (order :balonius/sequence)}]
+             :poloniex/sequence (order :poloniex/sequence)}]
     (persistent!
      (reduce
       (fn [acc [k v]]
@@ -141,6 +129,7 @@
            "amount" (str->number v)
            "total"  (str->number v)
            "type"   (keyword v)
+           "date"   (util/->inst v)
            v)))
       (transient out)
       (order "data")))))
@@ -156,11 +145,11 @@
   - `:order-book-remove`
   - `:new-trade`
 
-  Which are case-adjusted names obtained from the [documented Poloniex
-  API](https://poloniex.com/support/api/).
+  Which are case-adjusted names obtained from the [underlying API's
+  data](https://poloniex.com/support/api/).
 
-  The set of possible keys is `:trade-id`, `:type`, `:total`, `:amount`,
-  `:rate` & `:balonius/sequence`.
+  Aside from `:message`, the set of possible keys is `:trade-id`, `:type`,
+  `:total`, `:amount`, `:rate` & `:poloniex/sequence`.
 
   All messages have an attached sequence number, however *messages will be
   placed on the output channel in the order in which they were received,
@@ -181,19 +170,19 @@
     :type              :ask
     :rate              0.01881999M
     :amount            47.77001114M
-    :balonius/sequence 91752915}]
+    :poloniex/sequence 91752915}]
   [{:message           :new-trade,
     :amount            0.01594050M,
-    :date              "2016-08-23 22:03:02",
+    :date              (inst "2016-08-23..."),
     :rate              0.01881999M,
     :total             0.00030000M,
     :trade-id          "16056968",
     :type              :buy
-    :balonius/sequence 91752915}]
+    :poloniex/sequence 91752915}]
   [{:message           :order-book-remove
     :type              :ask
     :rate              0.02149902M
-    :balonius/sequence 91752915}]
+    :poloniex/sequence 91752915}]
   [(follow!
     conn [:BTC :ETH]
     {:chan (async/chan
