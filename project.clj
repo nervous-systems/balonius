@@ -36,9 +36,4 @@
                            :output-dir    "target/node-test-adv"
                            :target        :nodejs
                            :optimizations :advanced
-                           :main          balonius.test.runner}}
-               {:id "generic-test"
-                :source-paths ["src" "test"]
-                :compiler {:output-to     "target/generic-test/test.js"
-                           :optimizations :simple
                            :main          balonius.test.runner}}]})

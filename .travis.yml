@@ -1,0 +1,10 @@
+language: clojure
+sudo: required
+dist: trusty
+jdk:
+  - oraclejdk8
+before_install:
+  - nvm install 5
+  - wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && chmod +x lein
+  - ./lein npm install
+script: ./lein test && ./lein doo node node-test once

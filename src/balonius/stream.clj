@@ -22,10 +22,11 @@
   the underlying subscription, though the connection will remain live."
   (:require [balonius.wamp :as wamp]
             [balonius.util :as util]
+            [balonius.munge :as munge]
             [camel-snake-kebab.core :as csk]
-            [#? (:clj  clojure.core.async
-                 :cljs cljs.core.async) :as async]))
-
+            [taoensso.timbre :as log]
+            [clojure.core.async :as async])
+  (:gen-class))
 
 (defn- subscription! [conn topic f
                       & [{:keys [chan str->number]
@@ -38,7 +39,7 @@
   [:pair :last :low-ask :high-bid :change :base-vol :quote-vol :frozen? :high-24 :low-24])
 
 (defn- ticker-frame->map [{args :args} str->number]
-  (util/tidy-tick (zipmap ticker-cols args)))
+  (munge/->tick (zipmap ticker-cols args)))
 
 (defn connect!
   "Return a promise resolving to a connection record for the Poloniex WAMP/WS
@@ -52,10 +53,10 @@
    (merge {:uri   "wss://api.poloniex.com"
            :realm "realm1"} opts)))
 
-#? (:clj
-    (defn connect!! "(Clojure-only) Blocking implementation of [[connect!]]"
-      [& [opts]]
-      @(connect! opts)))
+(defn connect!!
+  "(Clojure-only) If `@(connect!)` is too much work."
+  [& [opts]]
+  @(connect! opts))
 
 (defn ticker!
   "Given a connection record, return a core.async channel containing maps having
@@ -103,7 +104,7 @@
     :user       "nicetomeetyou",
     :body       "OnceIsNonce, punctuation?",
     :reputation 0}]
-  [(async/<!! (trollbox! conn {:chan (async/chan (filter 1 (fn [{rep :reputation}] (< 0 rep))))}))
+  [(async/<!! (trollbox! conn {:chan (async/chan 1 (filter (fn [{rep :reputation}] (< 0 rep))))}))
    {:type      :trollbox-message,
     :id         9704960,
     :user       "LordBeer",
@@ -129,7 +130,7 @@
            "amount" (str->number v)
            "total"  (str->number v)
            "type"   (keyword v)
-           "date"   (util/->inst v)
+           "date"   (munge/->inst v)
            v)))
       (transient out)
       (order "data")))))
@@ -162,7 +163,7 @@
   (let [xform  (comp (mapcat #(flatten-orders % str->number))
                      (map    #(order->map % str->number)))
         chan   (async/chan 1 xform)]
-    (wamp/subscribe! conn (util/->pair pair) chan)
+    (wamp/subscribe! conn (munge/->pair pair) chan)
     (cond-> chan out-ch (util/pipe* out-ch))))
 
 (util/with-doc-examples! follow!
@@ -187,6 +188,18 @@
     conn [:BTC :ETH]
     {:chan (async/chan
             1 (comp
-               (filter (comp #{:order-book-modify} :type))
+               (filter (comp #{:order-book-modify} :message))
                (map    (juxt :type :amount))))})
    (Channel= [:bid 47.7701114M] ...)])
+
+(defn ^:no-doc -main [& _]
+  (let [conn   (connect!!)
+        ticker (ticker! conn)
+        btcxmr (follow! conn [:BTC :XMR])
+        troll  (trollbox! conn)]
+    (loop []
+      (async/alt!!
+        ticker ([m] (log/info "Ticker" m))
+        btcxmr ([m] (log/info "Pair"   m))
+        troll  ([m] (log/info "Troll"  m)))
+      (recur))))

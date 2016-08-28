@@ -86,3 +86,8 @@ a, a span {
 .sidebar.secondary li.current a {
     border-color: #0096cc;
 }
+
+.github img {
+    width: 160px;
+    opacity: 0.5;
+}
