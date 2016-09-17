@@ -63,14 +63,6 @@
     [(transient {}) (transient {})]
     m)))
 
-(defn rename-keys [map kmap]
-  (let [tmap (transient map)]
-    (persistent!
-     (reduce
-      (fn [acc [old new]]
-        (cond-> acc (contains? map old) (assoc! new (get map old))))
-      (apply dissoc! tmap (keys kmap)) kmap))))
-
 (defn assoc-when [m & kvs]
   (persistent!
    (reduce

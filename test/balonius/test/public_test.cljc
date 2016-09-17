@@ -22,12 +22,6 @@
       (is (= 2 (demand :range-min)))
       (is (= [:balonius.test/number "26.64"] (demand :amount))))))
 
-(defn- bnum? [x]
-  (and (vector? x) (= first x ::number)))
-
-(defn values* [m & ks]
-  (map m ks))
-
 (deftest trade-history
   (let [trade-date   15803000
         [query resp] (with-response public/trade-history!

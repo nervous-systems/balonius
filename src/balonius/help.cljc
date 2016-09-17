@@ -1,4 +1,4 @@
-(ns balonius.core
+(ns balonius.help
   (:require [balonius.munge :as munge]
             [clojure.string :as str]))
 
@@ -8,4 +8,3 @@
   [v]
   [(keyword (str/upper-case (name (first v))))
    (keyword (str/upper-case (name (second v))))])
-

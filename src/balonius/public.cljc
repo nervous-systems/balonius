@@ -1,6 +1,9 @@
 (ns balonius.public
+  "1:1 mapping to Poloniex's unauthenticated/public endpoints
+  <https://poloniex.com/support/api/>."
   (:require [kvlt.core :as kvlt]
             [clojure.string :as str]
+            [clojure.set :refer [rename-keys]]
             [balonius.util :as util]
             [balonius.munge :as munge]
             [promesa.core :as p]
@@ -31,7 +34,7 @@
    :low24hr       :low-24})
 
 (defn- munge-ticker [m]
-  (munge/->pair-map #(munge/->tick (util/rename-keys % tick-renames)) m))
+  (munge/->pair-map #(munge/->tick (rename-keys % tick-renames)) m))
 
 (defn ticker! [& [pair opts]]
   (public!
@@ -79,8 +82,8 @@
 
 (defn trade-history!
   "Corresponds to `returnTradeHistory`.  Accepts a map containing a
-  `:pair` (vector of keywords) and optional `:start` and `:end`
-  timestamps. Returns a sequence of maps."
+  `:pair` (vector of keywords) and an optional `:start` and `:end`
+  (msecs since epoch or Date). Returns a sequence of maps."
   [{:keys [pair start end]} & [opts]]
   (let [query (util/assoc-when {:currencyPair (munge/->pair pair)}
                 :start (some-> start munge/->timestamp)
@@ -104,7 +107,7 @@
      :total           0.00012704M} ...]])
 
 (defn- munge-book-entry [entry]
-  (let [entry (util/rename-keys entry {:isFrozen :frozen? :seq :sequence})
+  (let [entry (rename-keys entry {:isFrozen :frozen? :seq :sequence})
         parse #(mapv (fn [v] (update v 0 util/str->number)) %)]
     (-> entry
         (update :frozen? #(= % "1"))
@@ -130,15 +133,15 @@
                :weightedAverage :weighted-avg}]
   (defn- munge-chart-entry [entry]
     (-> entry
-        (util/rename-keys renames)
+        (rename-keys renames)
         (update :date munge/->inst))))
 
 (defn- munge-chart [chart]
   (mapv chart munge-chart-entry))
 
 (defn chart!
-  "Corresponds to `returnChartData`.  Accepts map requiring keys `:pair`,
-  `:period`, `:start`, `:end`."
+  "Corresponds to `returnChartData`.  Accepts a map requiring keys: `:pair`,
+  `:period` (number), `:start` & `:end` (msecs since epoch, or Date)."
   [{:keys [pair period start end]} & [opts]]
   (let [query {:currencyPair (munge/->pair pair)
                :period       period
@@ -188,8 +191,8 @@
 (def ^:private munge-loan-orders (partial mapv munge-loan-order))
 
 (defn loan-orders!
-  "Takes a currency name, and returns a map containing `:offers` and `:demands`
-  sequences describing active loan orders.
+  "Takes a currency (e.g. `:btc`), and returns a map containing `:offers` and
+  `:demands` sequences describing active loan orders.
 
   Corresponds to `returnLoanOrders`."
   [cur & [opts]]

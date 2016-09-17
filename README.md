@@ -6,50 +6,57 @@ Balonius is a client for the [Poloniex cryptocurrency exchange](poloniex.com),
 with support for its public, trading and market data APIs.  The non-streaming
 portions of the client (i.e. `balonius.public`, `balonius.trade`) are available
 to Clojurescript (Node, mostly, due to the absence of CORS headers on the remote
-API).
+API - but browsers also, in principle).
 
 In general, the API is asynchronous, using (derefable)
 [promesa](https://github.com/funcool/promesa) promises for single deferred
 results and [core.async](https://github.com/clojure/core.async) channels for
 streams of values.
 
-### [API Reference](https://nervous.io/doc/balonius/)
+Obviously you're going to lose money, and it's not my fault.
+
+## [API Reference](https://nervous.io/doc/balonius/)
+
+## Examples
 
 ```clojure
 @(balonius.trade/buy! {:pair [:btc :bcy] :amount 1 :rate 0.00056513M})
 {:order-number 2566300282
  :trades
- ({:amount   0.67393284M
-   :date     (inst "2016-09-10T...")
+ [{:amount   0.67393284M
+   :date     #inst "2016-09-10T..."
    :rate     0.00056367M
    :total    0.00037987M
    :trade-id 90269
    :type     :buy}
   {:amount   0.32606716M
-   :date     (inst "2016-09-10T...")
+   :date     #inst "2016-09-10T..."
    :rate     0.00056368M
    :total    0.00018379M
    :trade-id 90270
-   :type     :buy})}
+   :type     :buy}]}
 ```
 
 ```clojure
-(async/<!! (balonius.trade/ticker! conn))
- {:quote-vol 5550916.88164119M,
-  :high-bid  0.00770008M,
-  :base-vol  43773.79466888M,
-  :low-24    0.00650005M,
-  :low-ask   0.00772999M,
-  :pair      [:BTC :XMR],
-  :frozen?   false,
-  :high-24   0.00938421M,
-  :change    -0.13631396M,
-  :last      0.00772999M}
+(let [conn @(balonius.stream/connect!)]
+  (<!! (balonius.stream/ticker! conn)))
+;; =>
+{:quote-vol 5550916.88164119M
+ :high-bid  0.00770008M
+ :base-vol  43773.79466888M
+ :low-24    0.00650005M
+ :low-ask   0.00772999M
+ :pair      [:BTC :XMR]
+ :frozen?   false
+ :high-24   0.00938421M
+ :change    -0.13631396M
+ :last      0.00772999M}
 ```
 
 ```clojure
-(async/<!! (balonius.trade/trollbox!
-             conn {:chan (async/chan 1 (filter (comp pos? :reputation))}))
+(let [msg-ch (async/chan 1 (filter (comp pos? :reputation)))]
+ (async/<!! (balonius.stream/trollbox! conn {:chan msg-ch})))
+;; =>
 {:type      :trollbox-message,
  :id         9704960,
  :user       "LordBeer",

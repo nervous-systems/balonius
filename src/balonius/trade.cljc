@@ -7,7 +7,7 @@
 
   The constraints of the remote API are such that the nonce can't be reset or
   read (at least not machine-readably), and is expected to monotonically
-  increase per-account (requiring, e.g. some kind of coordination between
+  increase across requests (requiring, e.g. some kind of coordination between
   concurrent instances of an application).  Accordingly, managing this process
   is entirely the responsibility of the user.
 
@@ -74,7 +74,7 @@
   (util/map-vals util/str->number m))
 
 (defn balances!
-  "`returnBalances`"
+  "`returnBalances`."
   [creds & [opts]]
   (trade!
    {:cmd "returnBalances" :creds creds :opts opts}
@@ -138,7 +138,7 @@
              :body body} munge-complete-balances)))
 
 (defn deposit-addresses!
-  "`returnDepositAddresses`"
+  "`returnDepositAddresses`."
   [creds & [opts]]
   (trade! {:cmd "returnDepositAddresses" :creds creds :opts opts}))
 
@@ -157,7 +157,7 @@
 
 (defn new-deposit-address!
   "Generates a new deposit address for a specific currency.  There are
-  restrictions around how often this currency may be called.
+  restrictions around how often this operation may be performed.
 
   Takes a currency symbol and returns either a String address, or throws an
   `ExceptionInfo` instance with the remote message & response body.
@@ -195,8 +195,8 @@
 
 (defn history!
   "Retrieve this account's deposit and withdrawal history within the given time
-  range.  Returns a map having containing sequences under `:deposits` and
-  `:widthdrawals` keys.
+  range.  Returns a map containing sequences under `:deposits` and
+  `:widthdrawals`.
 
   Corresponds to `returnDepositsWithdrawals`."
   [creds {:keys [start end]} & [opts]]
@@ -262,8 +262,9 @@
 (defn trade-history!
   "If `:pair` is specified, retrieve trade history within that market (sequence
   of maps), else retrieve trade history across all markets (mapping between
-  pairs and sequences of maps).  One or more of `:start` or `:end` may be
-  supplied to constrain the results, otherwise the API defaults to one day.
+  pairs and sequences of maps).  One or more of `:start` or `:end` (epoch msecs
+  or Date) may be supplied to constrain the results, otherwise the API defaults
+  to one day's worth.
 
   Corresponds to `returnTradeHistory`."
   [creds & [{:keys [pair start end] :or {pair "all"}} opts]]
@@ -394,7 +395,7 @@
 (defn cancel-order!
   "Cancel the order w/ the given number.  Returns nothing in the event of success.
 
-  Corresponds to `cancelOrder`"
+  Corresponds to `cancelOrder`."
   [creds order & [opts]]
   (trade!
    {:cmd  "cancelOrder"
@@ -458,8 +459,8 @@
     (trade!
      {:cmd  "transferBalance"
       :creds creds
-      :opts opts
-      :body body}
+      :opts  opts
+      :body  body}
      (fn [resp]
        (if (zero? (resp :success))
          (remote-error resp)
