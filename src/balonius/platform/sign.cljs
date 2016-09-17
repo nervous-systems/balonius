@@ -1,8 +1,8 @@
 (ns balonius.platform.sign
-  (:require [cljs.nodejs :as nodejs]))
+  (:require [goog.crypt])
+  (:import [goog.crypt Hmac Sha512]))
 
-(let [crypto (nodejs/require "crypto")]
-  (defn hmac-sha512 [s k]
-    (let [mac (.createHmac crypto "sha512" k)]
-      (.update mac (js/Buffer. s "utf8"))
-      (.digest mac "hex"))))
+(defn hmac-sha512 [s k]
+  (let [s (goog.crypt/stringToByteArray s)
+        k (goog.crypt/stringToByteArray k)]
+    (-> (Sha512.) (Hmac. k) (.getHmac s) goog.crypt/byteArrayToHex)))

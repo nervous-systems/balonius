@@ -25,7 +25,8 @@
    (#? (:clj async/go-loop :cljs go-loop) []
     (let [v (async/<! from)]
       (if (nil? v)
-        (when close? (async/close! to))
+        (when close?
+          (async/close! to))
         (if (async/>! to v)
           (recur)
           (async/close! from)))))
@@ -40,6 +41,12 @@
         (fn [acc# ~k-var ~v-var]
           (assoc! acc# ~k-expr ~v-expr))
         ~m)))
+
+(defn map-kv [kf vf m]
+  (traduce
+   (fn [acc k v]
+     (assoc! acc (kf k) (vf v)))
+   m))
 
 (defn map-vals [f m]
   (traduce

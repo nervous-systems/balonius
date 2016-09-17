@@ -2,9 +2,11 @@
 
 [![Clojars Project](https://img.shields.io/clojars/v/io.nervous/balonius.svg)](https://clojars.org/io.nervous/balonius) [![Build Status](https://travis-ci.org/nervous-systems/balonius.svg?branch=master)](https://travis-ci.org/nervous-systems/balonius)
 
-Balonius is a client for the [Poloniex cryptocurrency exchange](poloniex.com), with support for its
-public, trade and market data APIs.  The non-streaming portions of the client
-(i.e. `balonius.public`, `balonius.trade`) are available to Clojurescript (Node, due to the absence of CORS headers).
+Balonius is a client for the [Poloniex cryptocurrency exchange](poloniex.com),
+with support for its public, trading and market data APIs.  The non-streaming
+portions of the client (i.e. `balonius.public`, `balonius.trade`) are available
+to Clojurescript (Node, mostly, due to the absence of CORS headers on the remote
+API).
 
 In general, the API is asynchronous, using (derefable)
 [promesa](https://github.com/funcool/promesa) promises for single deferred
@@ -14,7 +16,7 @@ streams of values.
 ### [API Reference](https://nervous.io/doc/balonius/)
 
 ```clojure
-@(balonius.trade/buy! {:pair [:btc :bcy :amount 1 :rate 0.00056513M]})
+@(balonius.trade/buy! {:pair [:btc :bcy] :amount 1 :rate 0.00056513M})
 {:order-number 2566300282
  :trades
  ({:amount   0.67393284M
@@ -60,4 +62,3 @@ streams of values.
 balonius is free and unencumbered public domain software. For more
 information, see http://unlicense.org/ or the accompanying UNLICENSE
 file.
-

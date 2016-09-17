@@ -50,26 +50,25 @@
       (is (= :buy (trade :type)))
       (is (not trades)))))
 
-(let [book {:asks     [["0.007" 1.01]]
-            :bids     [["0.01"  6.14]]
-            :isFrozen "0"
-            :seq      26}]
-  (deftest order-book-pair
-    (let [[query resp] (with-response public/order-book!
-                         {:pair [:DOGE :eth] :depth 1}
-                         book)]
-      (is (= query {:command      "returnOrderBook"
-                    :currencyPair "DOGE_ETH"
-                    :depth        1}))
-      (is (= [[[:balonius.test/number "0.007"] 1.01]] (resp :asks)))
-      (is (not (resp :frozen? true)))))
+(def book
+  {:asks     [["0.007" 1.01]]
+   :bids     [["0.01"  6.14]]
+   :isFrozen "0"
+   :seq      26})
 
-  (deftest order-book-all
-    (let [[query resp] (with-response public/order-book! nil
-                         {:BTC_NXT (assoc book :isFrozen "1")})]
-      (is (= query {:command "returnOrderBook" :currencyPair "all"}))
-      (let [book (resp [:BTC :NXT])]
-        (is (book :frozen?))))))
+(deftest order-book-pair
+  (let [[query resp] (with-response public/order-book!
+                       {:pair [:DOGE :eth] :depth 1}
+                       book)]
+    (is (= query {:command      "returnOrderBook"
+                  :currencyPair "DOGE_ETH"
+                  :depth        1}))
+    (is (= [[[:balonius.test/number "0.007"] 1.01]] (resp :asks)))
+    (is (not (resp :frozen? true)))))
 
-(deftest chart-data
-  )
+(deftest order-book-all
+  (let [[query resp] (with-response public/order-book! nil
+                       {:BTC_NXT (assoc book :isFrozen "1")})]
+    (is (= query {:command "returnOrderBook" :currencyPair "all"}))
+    (let [book (resp [:BTC :NXT])]
+      (is (book :frozen?)))))

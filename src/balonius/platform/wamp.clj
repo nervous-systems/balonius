@@ -21,10 +21,6 @@
     (call [_ v]
       (f v))))
 
-(defmacro subscribe [o slot f]
-  (let [slot (csk/->camelCaseSymbol (str "." (name slot)))]
-    `(.subscribe (~slot ~o) (observer ~f))))
-
 (let [mapper (ObjectMapper.)]
   (defn- pubsub->map [o]
     (let [args    (.convertValue mapper (.arguments o)        List)
@@ -53,7 +49,7 @@
   (connect! [this]
     (let [p (on-status client WampClient$ConnectedState)]
       (.open client)
-      (p/then p (constantly this))))
+      (p/then p (fn [_] this))))
   (disconnect! [_]
     (let [p (on-status client WampClient$DisconnectedState)]
       (.close client)

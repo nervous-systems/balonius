@@ -25,13 +25,13 @@
 (defn with-response [f arg resp]
   (with-redefs [kvlt.core/request! (test.util/responding {:status 200
                                                           :body   resp})]
-    (f creds arg {:str->number
-                  (fn [x] [::number x])})))
+    (let [[req resp] (f creds arg {:str->number (fn [x] [::number x])})]
+      [(assoc req :form (unquery (req :body))) resp])))
 
 (deftest auth
   (dotimes [_ 2]
     (let [[req] (with-response trade/balances! nil {})]
-      (is (str/includes? (req :body) (str "nonce=" @nonce)))
+      (is (= (-> req :form :nonce) (str @nonce)))
       (is (= (str ::key) (some (req :headers) #{:key :Key})))
       (let [sig (some (req :headers) #{:sign :Sign})]
         (is (= sig (platform.sign/hmac-sha512 (req :body) (str ::secret))))))))
@@ -41,8 +41,7 @@
    :date     "2014-10-18 23:03:21"
    :rate     "0.00000173"
    :total    "0.00058625"
-   :tradeID  "16164"
-   :type     "sell"})
+   :tradeID  "16164"})
 
 (def order
   {:pair       [:btc :doge]
@@ -52,17 +51,15 @@
 
 (deftest sell!
   (let [[req resp] (with-response trade/sell! order
-                     {:orderNumber (str 0xFAFF)
-                      :resultingTrades [trade]})]
+                     {:orderNumber     (str 0xFAFF)
+                      :resultingTrades [(assoc trade :type :sell)]})]
     (testing "request"
-      (let [query (unquery (req :body))]
-        (is (= query
-               {:currencyPair (balonius.munge/->pair [:btc :doge])
-                :rate         (str (order :rate))
-                :amount       (str (order :amount))
-                :fillOrKill   "1"
-                :command      "sell"
-                :nonce        (str @nonce)}))))
+      (is (= (dissoc (req :form) :nonce)
+             {:currencyPair (balonius.munge/->pair [:btc :doge])
+              :rate         (str (order :rate))
+              :amount       (str (order :amount))
+              :fillOrKill   "1"
+              :command      "sell"})))
     (testing "response"
       (is (= (resp :order-number) [::number (str 0xFAFF)]))
       (let [[trade' & trades] (resp :trades)]

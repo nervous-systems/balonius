@@ -349,7 +349,7 @@
   (buy-sell :buy creds args opts))
 
 (util/with-doc-examples! buy!
-  [@(buy! {:pair [:btc :bcy :amount 1 :rate 0.00056513M]})
+  [@(buy! {:pair [:btc :bcy] :amount 1 :rate 0.00056513M})
    {:order-number 2566300282M
     :trades
     ({:amount   0.67393284M,

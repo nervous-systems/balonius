@@ -37,17 +37,14 @@
          (str l "_" r))))))
 
 (let [numeric-ks #{:last :low-ask :high-bid :change :base-vol :quote-vol :high-24 :low-24}]
-  (defn ->tick [m & [str->number*]]
-    (let [str->number* (or str->number* util/str->number)]
-      (util/rewrite-map m k v
-        k (cond (numeric-ks k) (str->number* v)
-                (= k :frozen?) (= v "1")
-                (= k :pair)    (->pair v)
-                :else          v)))))
+  (defn ->tick [m]
+    (util/rewrite-map m k v
+      k (cond (numeric-ks k) (util/str->number v)
+              (= k :frozen?) (= v "1")
+              (= k :pair)    (->pair v)
+              :else          v))))
 
-(defn ->pair-map [tidy-val m]
-  (util/rewrite-map m pair v
-    (->pair pair) (tidy-val v)))
+(def ->pair-map (partial util/map-kv ->pair))
 
 (defn fapply-pairs [f x]
   (if (map? x)
